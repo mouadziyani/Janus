@@ -3,37 +3,35 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Api\RegisterRequest;
+use App\Http\Requests\Api\LoginRequest;
+use App\Http\Requests\Api\LogoutRequest;
+use App\Http\Requests\Api\MeRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function register(Request $register){
-        $register->validate([
-            'name'=>'required',
-            'email'=>'required|email|unique:users,email',
-            'password'=>'required|min:8|confirmed',
-        ]);
+    public function register(RegisterRequest $register){
         $user = User::create($register->only('name','email')+['password'=>$register->password]);
         $token = $user->createToken('token')->plainTextToken;
-        return response()->json(['success'=>true,'data'=>['user'=>$user,'token'=>$token],'message'=>'Register ok'],201);
+        return $this->success(['user'=>$user,'token'=>$token],'Opération réussie',201);
     }
 
-    public function login(Request $register){
+    public function login(LoginRequest $register){
         $user = User::where('email',$register->email)->first();
         if(!$user || !Hash::check($register->password,$user->password))
-            return response()->json(['success'=>false,'errors'=>['email'=>['Invalid']],'message'=>'Login error'],401);
+            return $this->error(['email'=>['Invalid']],'Login error',401);
         $token = $user->createToken('token')->plainTextToken;
-        return response()->json(['success'=>true,'data'=>['user'=>$user,'token'=>$token],'message'=>'Login ok']);
+        return $this->success(['user'=>$user,'token'=>$token],'Opération réussie');
     }
 
-    public function logout(Request $register){
+    public function logout(LogoutRequest $register){
         $register->user()->currentAccessToken()->delete();
-        return response()->json(['success'=>true,'data'=>null,'message'=>'Logout ok']);
+        return $this->success(null,'Opération réussie');
     }
 
-    public function me(Request $register){
-        return response()->json(['success'=>true,'data'=>$register->user(),'message'=>'Current user']);
+    public function me(MeRequest $register){
+        return $this->success($register->user(),'Opération réussie');
     }
 }
