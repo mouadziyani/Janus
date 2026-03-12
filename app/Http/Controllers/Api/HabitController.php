@@ -3,41 +3,48 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Api\HabitIndexRequest;
+use App\Http\Requests\Api\HabitStoreRequest;
+use App\Http\Requests\Api\HabitShowRequest;
+use App\Http\Requests\Api\HabitUpdateRequest;
+use App\Http\Requests\Api\HabitDestroyRequest;
 use App\Models\Habit;
 
 class HabitController extends Controller
 {
-    public function index(Request $r){
-        return response()->json(['success'=>true,'data'=>$r->user()->habits,'message'=>'All habits']);
+    public function index(HabitIndexRequest $r){
+        return $this->success($r->user()->habits,'Opération réussie');
     }
 
-    public function store(Request $r){
-        $r->validate([
-            'title'=>'required|max:100',
-            'frequency'=>'required|in:daily,weekly,monthly',
-            'target_days'=>'required|integer|min:1'
-        ]);
-        $h = Habit::create($r->only('title','description','frequency','target_days')+['user_id'=>$r->user()->id,'is_active'=>true]);
-        return response()->json(['success'=>true,'data'=>$h,'message'=>'Habit created'],201);
+    public function store(HabitStoreRequest $r){
+        $data = $r->only('title','description','frequency','target_days','color','is_active');
+        if (!array_key_exists('is_active', $data) || $data['is_active'] === null) {
+            $data['is_active'] = true;
+        }
+        $h = Habit::create($data+['user_id'=>$r->user()->id]);
+        return $this->success($h,'Opération réussie',201);
     }
 
-    public function show(Habit $habit){
-        return response()->json(['success'=>true,'data'=>$habit,'message'=>'Habit detail']);
+    public function show(HabitShowRequest $r, Habit $habit){
+        if ($habit->user_id !== $r->user()->id) {
+            return $this->error(null,'Unauthorized',403);
+        }
+        return $this->success($habit,'Opération réussie');
     }
 
-    public function update(Request $r,Habit $habit){
-        $r->validate([
-            'title'=>'sometimes|required|max:100',
-            'frequency'=>'sometimes|required|in:daily,weekly,monthly',
-            'target_days'=>'sometimes|required|integer|min:1'
-        ]);
-        $habit->update($r->only('title','description','frequency','target_days','is_active'));
-        return response()->json(['success'=>true,'data'=>$habit,'message'=>'Habit updated']);
+    public function update(HabitUpdateRequest $r, Habit $habit){
+        if ($habit->user_id !== $r->user()->id) {
+            return $this->error(null,'Unauthorized',403);
+        }
+        $habit->update($r->only('title','description','frequency','target_days','color','is_active'));
+        return $this->success($habit,'Opération réussie');
     }
 
-    public function destroy(Habit $habit){
+    public function destroy(HabitDestroyRequest $r, Habit $habit){
+        if ($habit->user_id !== $r->user()->id) {
+            return $this->error(null,'Unauthorized',403);
+        }
         $habit->delete();
-        return response()->json(['success'=>true,'data'=>null,'message'=>'Habit deleted']);
+        return $this->success(null,'Opération réussie');
     }
 }
