@@ -12,6 +12,7 @@ class Habit extends Model
         'description',
         'frequency',
         'target_days',
+        'color',
         'is_active'
     ];
 
